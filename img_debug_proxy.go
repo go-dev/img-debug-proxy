@@ -23,7 +23,6 @@ var (
     verbose  = flag.Bool("verbose", false, "proxy verbose mode, boolean")
     port     = flag.String("port", "8080", "proxy port number")
     indent   = flag.Int("indent", 5, "label indentation from the top-left image's corner in pixels")
-    fontContext  *freetype.Context
 )
 
 
@@ -36,8 +35,7 @@ func main() {
         return
     }
 
-    fontContext = createContext(font)
-    fontHeight := int(fontContext.PointToFix32(*size)>>8)
+    fontHeight := int(createContext(font).PointToFix32(*size)>>8)
     // two points to output the text and its shadow
     ptA := freetype.Pt(*indent + 1, *indent + 1 + fontHeight)
     ptB := freetype.Pt(*indent, *indent + fontHeight)
@@ -47,11 +45,12 @@ func main() {
         outImage := image.NewRGBA(img.Bounds())
         draw.Copy(outImage, image.ZP, img, img.Bounds(), nil)
         text := fmt.Sprintf("%dx%d", img.Bounds().Dx(), img.Bounds().Dy())
+        fontContext := createContext(font)
         fontContext.SetClip(img.Bounds())
         fontContext.SetDst(outImage)
 
-        drawString(image.White, ptA, text)
-        drawString(image.Black, ptB, text)
+        drawString(image.White, fontContext, ptA, text)
+        drawString(image.Black, fontContext, ptB, text)
 
         return outImage
     }))
@@ -73,7 +72,7 @@ func loadFont() (*truetype.Font, error){
     return font, nil
 }
 
-func drawString(src image.Image, position raster.Point, text string){
+func drawString(src image.Image, fontContext *freetype.Context, position raster.Point, text string){
     fontContext.SetSrc(src)
     _, err := fontContext.DrawString(text, position)
     if err != nil {
